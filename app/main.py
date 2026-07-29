@@ -16,6 +16,7 @@ from app.exceptions.handlers import register_exception_handlers
 from app.telemetry import instrument_fastapi, setup_telemetry, shutdown_telemetry
 from app.telemetry.logging import configure_logging
 from app.telemetry.middleware import PrometheusMiddleware
+from app.workers.health_probe import run_health_probes
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,7 @@ async def lifespan(app: FastAPI):
         logger.warning("Redis is not reachable at startup; readiness will fail")
 
     reload_task = asyncio.create_task(run_config_hot_reload(store))
+    probe_task = asyncio.create_task(run_health_probes(cache))
     app.state.config_store = store
 
     logger.info(
@@ -53,10 +55,12 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         reload_task.cancel()
-        try:
-            await reload_task
-        except asyncio.CancelledError:
-            pass
+        probe_task.cancel()
+        for task in (reload_task, probe_task):
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
         cache.close()
         engine.dispose()
         shutdown_telemetry()
