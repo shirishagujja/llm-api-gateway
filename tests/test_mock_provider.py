@@ -4,6 +4,7 @@ import pytest
 
 from app.providers.mock.provider import MockProvider
 from app.providers.schemas import ChatMessage, EmbeddingRequest, GenerateRequest
+from app.services.llm_service import LLMService
 
 
 @pytest.mark.asyncio
@@ -49,3 +50,17 @@ async def test_mock_provider_embeddings():
     assert response.provider == "mock"
     assert len(response.data) == 2
     assert len(response.data[0].embedding) == 4
+
+
+@pytest.mark.asyncio
+async def test_llm_service_routes_to_mock():
+    service = LLMService()
+    response = await service.generate(
+        GenerateRequest(
+            model="mock-chat",
+            messages=[ChatMessage(role="user", content="hello")],
+        ),
+        provider="mock",
+    )
+    assert response.provider == "mock"
+    assert "hello" in response.choices[0].message.content
