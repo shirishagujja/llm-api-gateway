@@ -3,11 +3,14 @@ import asyncio
 import logging
 
 from fastapi import FastAPI
+from sqlalchemy import text
 
+from app.cache.redis_client import create_cache_client
 from app.config.store import get_config_store
 from app.config.watcher import run_config_hot_reload
 from app.core.config import settings
 from app.core.constants import API_PREFIX, APP_VERSION, HEALTH_ENDPOINT
+from app.db.session import engine
 from app.exceptions.handlers import register_exception_handlers
 from app.telemetry import instrument_fastapi, setup_telemetry, shutdown_telemetry
 from app.telemetry.logging import configure_logging
@@ -28,6 +31,14 @@ async def lifespan(app: FastAPI):
     setup_telemetry(yaml_config.telemetry)
     instrument_fastapi(app)
 
+    with engine.connect() as connection:
+        connection.execute(text("SELECT 1"))
+
+    cache = create_cache_client(settings.redis_url)
+    app.state.cache = cache
+    if not cache.ping():
+        logger.warning("Redis is not reachable at startup; readiness will fail")
+
     reload_task = asyncio.create_task(run_config_hot_reload(store))
     app.state.config_store = store
 
@@ -45,6 +56,8 @@ async def lifespan(app: FastAPI):
             await reload_task
         except asyncio.CancelledError:
             pass
+        cache.close()
+        engine.dispose()
         shutdown_telemetry()
         logger.info("Gateway shutdown complete")
 
