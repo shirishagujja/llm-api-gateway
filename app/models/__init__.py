@@ -5,6 +5,12 @@ from .provider import Provider
 from .llm_model import LLMModel
 from .llm_request import LLMRequest
 from .usage_record import UsageRecord
+from .team import (
+    Team,
+    TeamAllowedModel,
+    TeamPolicy,
+    TeamProviderPermission,
+)
 
 __all__ = [
     "Organization",
@@ -14,4 +20,8 @@ __all__ = [
     "LLMModel",
     "LLMRequest",
     "UsageRecord",
+    "Team",
+    "TeamAllowedModel",
+    "TeamPolicy",
+    "TeamProviderPermission",
 ]

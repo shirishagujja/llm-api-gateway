@@ -25,6 +25,12 @@ class APIKey(Base):
         nullable=False,
     )
 
+    team_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("teams.id", ondelete="RESTRICT"),
+        nullable=True,
+    )
+
     name: Mapped[str] = mapped_column(
         String(100),
         nullable=False,
@@ -76,6 +82,11 @@ class APIKey(Base):
         back_populates="api_keys",
     )
 
+    team = relationship(
+        "Team",
+        back_populates="api_keys",
+    )
+
     usage_records = relationship(
         "UsageRecord",
         back_populates="api_key",
@@ -87,5 +98,6 @@ class APIKey(Base):
     )
 
 Index("ix_api_keys_user_id", APIKey.user_id)
+Index("ix_api_keys_team_id", APIKey.team_id)
 Index("ix_api_keys_active", APIKey.is_active)
 Index("ix_api_keys_prefix", APIKey.key_prefix)

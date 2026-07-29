@@ -42,3 +42,9 @@ class Organization(Base, TimestampMixin):
         back_populates="organization",
         cascade="all, delete-orphan",
     )
+
+    teams = relationship(
+        "Team",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
