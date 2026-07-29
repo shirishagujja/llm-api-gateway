@@ -3,12 +3,15 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+from decimal import Decimal
+
 from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     func,
 )
@@ -52,6 +55,18 @@ class LLMModel(Base):
     max_output_tokens: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
+    )
+
+    input_price_per_million_usd: Mapped[Decimal] = mapped_column(
+        Numeric(12, 6),
+        nullable=False,
+        default=Decimal("0.50"),
+    )
+
+    output_price_per_million_usd: Mapped[Decimal] = mapped_column(
+        Numeric(12, 6),
+        nullable=False,
+        default=Decimal("1.50"),
     )
 
     is_active: Mapped[bool] = mapped_column(

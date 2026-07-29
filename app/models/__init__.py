@@ -11,6 +11,7 @@ from .team import (
     TeamPolicy,
     TeamProviderPermission,
 )
+from .quota import AuditLog, RateLimitPriority, TeamBudget, TeamRateLimit
 
 __all__ = [
     "Organization",
@@ -24,4 +25,8 @@ __all__ = [
     "TeamAllowedModel",
     "TeamPolicy",
     "TeamProviderPermission",
+    "TeamRateLimit",
+    "TeamBudget",
+    "RateLimitPriority",
+    "AuditLog",
 ]

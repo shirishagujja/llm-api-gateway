@@ -45,6 +45,8 @@ def _provider() -> Provider:
 
 
 def _model(provider: Provider, *, active: bool = True) -> LLMModel:
+    from decimal import Decimal
+
     model = LLMModel(
         id=uuid4(),
         provider_id=provider.id,
@@ -52,6 +54,8 @@ def _model(provider: Provider, *, active: bool = True) -> LLMModel:
         display_name="GPT-4.1 Mini",
         context_window=1048576,
         max_output_tokens=32768,
+        input_price_per_million_usd=Decimal("0.50"),
+        output_price_per_million_usd=Decimal("1.50"),
         is_active=active,
     )
     model.provider = provider

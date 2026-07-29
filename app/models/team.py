@@ -59,6 +59,18 @@ class Team(Base):
         uselist=False,
         cascade="all, delete-orphan",
     )
+    rate_limit = relationship(
+        "TeamRateLimit",
+        back_populates="team",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
+    budget = relationship(
+        "TeamBudget",
+        back_populates="team",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
 
 
 class TeamProviderPermission(Base):
