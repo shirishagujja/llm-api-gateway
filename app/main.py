@@ -1,0 +1,75 @@
+from contextlib import asynccontextmanager
+import asyncio
+import logging
+
+from fastapi import FastAPI
+
+from app.config.store import get_config_store
+from app.config.watcher import run_config_hot_reload
+from app.core.config import settings
+from app.core.constants import API_PREFIX, APP_VERSION, HEALTH_ENDPOINT
+from app.exceptions.handlers import register_exception_handlers
+from app.telemetry import instrument_fastapi, setup_telemetry, shutdown_telemetry
+from app.telemetry.logging import configure_logging
+from app.telemetry.middleware import PrometheusMiddleware
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    store = get_config_store(settings.gateway_config_path)
+    yaml_config = store.get()
+
+    configure_logging(
+        level=yaml_config.logging.level,
+        json_logs=yaml_config.logging.json_logs,
+    )
+    setup_telemetry(yaml_config.telemetry)
+    instrument_fastapi(app)
+
+    reload_task = asyncio.create_task(run_config_hot_reload(store))
+    app.state.config_store = store
+
+    logger.info(
+        "Gateway started env=%s version=%s",
+        settings.app_env,
+        APP_VERSION,
+    )
+
+    try:
+        yield
+    finally:
+        reload_task.cancel()
+        try:
+            await reload_task
+        except asyncio.CancelledError:
+            pass
+        shutdown_telemetry()
+        logger.info("Gateway shutdown complete")
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version=APP_VERSION,
+    lifespan=lifespan,
+)
+
+register_exception_handlers(app)
+app.add_middleware(PrometheusMiddleware)
+
+
+@app.get("/")
+def root() -> dict[str, str]:
+    return {
+        "app": settings.app_name,
+        "env": settings.app_env,
+        "version": APP_VERSION,
+        "health": HEALTH_ENDPOINT,
+        "ready": "/ready",
+        "live": "/live",
+        "docs": "/docs",
+        "dashboard": "/dashboard",
+        "metrics": "/metrics",
+        "api": API_PREFIX,
+    }
