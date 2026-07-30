@@ -34,7 +34,7 @@ class RateLimitService:
         config = self._resolve_config(team_id)
         capacity = (
             config.requests_per_minute
-            * config.burst_multiplier
+            * float(config.burst_multiplier)
             * PRIORITY_CAPACITY_MULTIPLIER[config.priority.value]
         )
         refill = config.requests_per_minute / 60.0
@@ -75,7 +75,7 @@ class RateLimitService:
         config = self._resolve_config(team_id)
         capacity = (
             config.tokens_per_minute
-            * config.burst_multiplier
+            * float(config.burst_multiplier)
             * PRIORITY_CAPACITY_MULTIPLIER[config.priority.value]
         )
         refill = config.tokens_per_minute / 60.0
@@ -127,7 +127,7 @@ class RateLimitService:
         config = self._resolve_config(team_id)
         capacity = (
             config.tokens_per_minute
-            * config.burst_multiplier
+            * float(config.burst_multiplier)
             * PRIORITY_CAPACITY_MULTIPLIER[config.priority.value]
         )
         refill = config.tokens_per_minute / 60.0
