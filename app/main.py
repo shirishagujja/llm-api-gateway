@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.api.v1 import health
+from app.api.v1.metrics import router as metrics_router
 from app.api.v1.router import api_router
 from app.cache.redis_client import create_cache_client
 from app.config.store import get_config_store
@@ -78,6 +79,7 @@ register_exception_handlers(app)
 app.add_middleware(PrometheusMiddleware)
 
 app.include_router(health.router)
+app.include_router(metrics_router)
 app.include_router(api_router, prefix=API_PREFIX)
 
 
