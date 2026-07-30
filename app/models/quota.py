@@ -56,7 +56,11 @@ class TeamRateLimit(Base):
         default=2.0,
     )
     priority: Mapped[RateLimitPriority] = mapped_column(
-        Enum(RateLimitPriority, name="rate_limit_priority"),
+        Enum(
+            RateLimitPriority,
+            name="rate_limit_priority",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        ),
         nullable=False,
         default=RateLimitPriority.NORMAL,
     )

@@ -10,15 +10,21 @@ from app.auth.permissions import require_admin
 from app.models.user import User
 from app.schemas.admin import (
     AllowedModelResponse,
+    BudgetDashboardResponse,
     ProviderPermissionResponse,
     SetAllowedModelsRequest,
     SetProviderPermissionRequest,
+    TeamBudgetResponse,
+    TeamBudgetUpdateRequest,
     TeamCreateRequest,
     TeamPolicyResponse,
     TeamPolicyUpdateRequest,
+    TeamRateLimitResponse,
+    TeamRateLimitUpdateRequest,
     TeamResponse,
 )
 from app.services.audit_service import AuditService
+from app.services.quota_admin_service import QuotaAdminService
 from app.services.team_admin_service import TeamAdminService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -138,4 +144,115 @@ def update_team_policy(
         enrichment_config=policy.enrichment_config or {},
         is_active=policy.is_active,
         updated_at=policy.updated_at,
+    )
+
+
+@router.get("/teams/{team_id}/rate-limit", response_model=TeamRateLimitResponse)
+def get_team_rate_limit(
+    team_id: UUID,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> TeamRateLimitResponse:
+    row = QuotaAdminService(db).get_rate_limit(team_id)
+    return TeamRateLimitResponse(
+        team_id=row.team_id,
+        requests_per_minute=row.requests_per_minute,
+        tokens_per_minute=row.tokens_per_minute,
+        burst_multiplier=float(row.burst_multiplier),
+        priority=row.priority.value,
+        is_active=row.is_active,
+        updated_at=row.updated_at,
+    )
+
+
+@router.put("/teams/{team_id}/rate-limit", response_model=TeamRateLimitResponse)
+def update_team_rate_limit(
+    team_id: UUID,
+    body: TeamRateLimitUpdateRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> TeamRateLimitResponse:
+    row = QuotaAdminService(db).update_rate_limit(team_id, body)
+    AuditService(db).record(
+        actor=admin,
+        action="update",
+        resource_type="team_rate_limit",
+        resource_id=team_id,
+        details=body.model_dump(exclude_unset=True),
+    )
+    return TeamRateLimitResponse(
+        team_id=row.team_id,
+        requests_per_minute=row.requests_per_minute,
+        tokens_per_minute=row.tokens_per_minute,
+        burst_multiplier=float(row.burst_multiplier),
+        priority=row.priority.value,
+        is_active=row.is_active,
+        updated_at=row.updated_at,
+    )
+
+
+@router.get("/teams/{team_id}/budget", response_model=TeamBudgetResponse)
+def get_team_budget(
+    team_id: UUID,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> TeamBudgetResponse:
+    row = QuotaAdminService(db).get_budget(team_id)
+    return TeamBudgetResponse(
+        team_id=row.team_id,
+        daily_budget_usd=float(row.daily_budget_usd),
+        monthly_budget_usd=float(row.monthly_budget_usd),
+        warning_threshold_pct=row.warning_threshold_pct,
+        hard_enforcement=row.hard_enforcement,
+        is_active=row.is_active,
+        updated_at=row.updated_at,
+    )
+
+
+@router.put("/teams/{team_id}/budget", response_model=TeamBudgetResponse)
+def update_team_budget(
+    team_id: UUID,
+    body: TeamBudgetUpdateRequest,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+) -> TeamBudgetResponse:
+    row = QuotaAdminService(db).update_budget(team_id, body)
+    AuditService(db).record(
+        actor=admin,
+        action="update",
+        resource_type="team_budget",
+        resource_id=team_id,
+        details=body.model_dump(exclude_unset=True),
+    )
+    return TeamBudgetResponse(
+        team_id=row.team_id,
+        daily_budget_usd=float(row.daily_budget_usd),
+        monthly_budget_usd=float(row.monthly_budget_usd),
+        warning_threshold_pct=row.warning_threshold_pct,
+        hard_enforcement=row.hard_enforcement,
+        is_active=row.is_active,
+        updated_at=row.updated_at,
+    )
+
+
+@router.get("/teams/{team_id}/budget/dashboard", response_model=BudgetDashboardResponse)
+def team_budget_dashboard(
+    team_id: UUID,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> BudgetDashboardResponse:
+    dashboard = QuotaAdminService(db).budget_dashboard(team_id)
+    return BudgetDashboardResponse(
+        team_id=dashboard.team_id,
+        team_slug=dashboard.team_slug,
+        daily_budget_usd=float(dashboard.daily_budget_usd),
+        monthly_budget_usd=float(dashboard.monthly_budget_usd),
+        daily_spent_usd=float(dashboard.daily_spent_usd),
+        monthly_spent_usd=float(dashboard.monthly_spent_usd),
+        daily_remaining_usd=float(dashboard.daily_remaining_usd),
+        monthly_remaining_usd=float(dashboard.monthly_remaining_usd),
+        warning_threshold_pct=dashboard.warning_threshold_pct,
+        daily_warning=dashboard.daily_warning,
+        monthly_warning=dashboard.monthly_warning,
+        hard_enforcement=dashboard.hard_enforcement,
     )
