@@ -13,6 +13,7 @@ from app.config.store import get_config_store
 from app.config.watcher import run_config_hot_reload
 from app.core.config import settings
 from app.core.constants import API_PREFIX, APP_VERSION, HEALTH_ENDPOINT
+from app.dashboard.router import router as dashboard_router
 from app.db.session import engine
 from app.exceptions.handlers import register_exception_handlers
 from app.telemetry import instrument_fastapi, setup_telemetry, shutdown_telemetry
@@ -80,6 +81,7 @@ app.add_middleware(PrometheusMiddleware)
 
 app.include_router(health.router)
 app.include_router(metrics_router)
+app.include_router(dashboard_router)
 app.include_router(api_router, prefix=API_PREFIX)
 
 

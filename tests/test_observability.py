@@ -32,6 +32,13 @@ def test_failover_counter_increments():
     assert after > before
 
 
+def test_dashboard_index_served():
+    client = TestClient(app)
+    response = client.get("/dashboard")
+    assert response.status_code == 200
+    assert "LLM API Gateway" in response.text
+
+
 def test_root_lists_dashboard_and_metrics():
     client = TestClient(app)
     response = client.get("/")
