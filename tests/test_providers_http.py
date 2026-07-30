@@ -7,6 +7,7 @@ import pytest
 
 from app.providers.anthropic.provider import AnthropicProvider
 from app.providers.http import AsyncHttpClient
+from app.providers.ollama.provider import OllamaProvider
 from app.providers.schemas import ChatMessage, GenerateRequest
 
 
@@ -47,6 +48,34 @@ async def test_anthropic_generate_normalizes_response():
     kwargs = http_client.post.await_args.kwargs
     assert kwargs["json"]["system"] == "be brief"
     assert kwargs["json"]["messages"][0]["role"] == "user"
+
+
+@pytest.mark.asyncio
+async def test_ollama_generate_normalizes_response():
+    payload = {
+        "model": "llama3.2",
+        "created_at": "2026-07-16T00:00:00Z",
+        "message": {"role": "assistant", "content": "hola"},
+        "done": True,
+        "prompt_eval_count": 3,
+        "eval_count": 1,
+    }
+    request = httpx.Request("POST", "http://localhost:11434/api/chat")
+    response = httpx.Response(200, json=payload, request=request)
+    http_client = AsyncMock(spec=AsyncHttpClient)
+    http_client.post = AsyncMock(return_value=response)
+
+    provider = OllamaProvider(http_client=http_client)
+    result = await provider.generate(
+        GenerateRequest(
+            model="llama3.2",
+            messages=[ChatMessage(role="user", content="hi")],
+        )
+    )
+
+    assert result.provider == "ollama"
+    assert result.choices[0].message.content == "hola"
+    assert result.usage.total_tokens == 4
 
 
 @pytest.mark.asyncio

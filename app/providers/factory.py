@@ -8,6 +8,7 @@ from app.exceptions.gateway import ValidationError
 from app.providers.anthropic.provider import AnthropicProvider
 from app.providers.base import BaseProvider
 from app.providers.mock.provider import MockProvider
+from app.providers.ollama.provider import OllamaProvider
 from app.providers.openai.provider import OpenAIProvider
 from app.providers.registry import PROVIDER_REGISTRY
 
@@ -65,6 +66,13 @@ class ProviderFactory:
                 )
             return AnthropicProvider(
                 api_key=key,
+                timeout=resolved_timeout,
+                base_url=resolved_base_url,
+            )
+
+        if provider_cls is OllamaProvider:
+            return OllamaProvider(
+                api_key=api_key,
                 timeout=resolved_timeout,
                 base_url=resolved_base_url,
             )
