@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.core.constants import DEFAULT_TIMEOUT_SECONDS
 from app.exceptions import UnknownProvider
 from app.exceptions.gateway import ValidationError
+from app.providers.anthropic.provider import AnthropicProvider
 from app.providers.base import BaseProvider
 from app.providers.mock.provider import MockProvider
 from app.providers.openai.provider import OpenAIProvider
@@ -50,6 +51,19 @@ class ProviderFactory:
         if provider_cls is OpenAIProvider:
             key = api_key or settings.openai_api_key.get_secret_value()
             return OpenAIProvider(
+                api_key=key,
+                timeout=resolved_timeout,
+                base_url=resolved_base_url,
+            )
+
+        if provider_cls is AnthropicProvider:
+            key = api_key or settings.anthropic_api_key.get_secret_value()
+            if not key:
+                raise ValidationError(
+                    "Anthropic API key is not configured.",
+                    provider=name,
+                )
+            return AnthropicProvider(
                 api_key=key,
                 timeout=resolved_timeout,
                 base_url=resolved_base_url,
