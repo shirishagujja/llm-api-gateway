@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -13,6 +14,13 @@ config = context.config
 # This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
+
+# Containers (and any environment where the DB isn't reachable at
+# `localhost`, e.g. Docker Compose service networking) must be able to
+# override the ini file's static URL.
+_database_url = os.environ.get("DATABASE_URL")
+if _database_url:
+    config.set_main_option("sqlalchemy.url", _database_url)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
