@@ -7,6 +7,7 @@ from app.exceptions import UnknownProvider
 from app.exceptions.gateway import ValidationError
 from app.providers.base import BaseProvider
 from app.providers.mock.provider import MockProvider
+from app.providers.openai.provider import OpenAIProvider
 from app.providers.registry import PROVIDER_REGISTRY
 
 
@@ -45,6 +46,14 @@ class ProviderFactory:
             else config.provider_timeout(name, DEFAULT_TIMEOUT_SECONDS)
         )
         resolved_base_url = base_url or config.provider_base_url(name)
+
+        if provider_cls is OpenAIProvider:
+            key = api_key or settings.openai_api_key.get_secret_value()
+            return OpenAIProvider(
+                api_key=key,
+                timeout=resolved_timeout,
+                base_url=resolved_base_url,
+            )
 
         if provider_cls is MockProvider:
             section = config.providers.get("mock")

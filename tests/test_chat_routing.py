@@ -219,3 +219,47 @@ async def test_gateway_service_returns_gateway_response(monkeypatch):
     assert response.choices[0].message.content == "hello"
     assert response.usage.total_tokens == 4
     fake_llm.generate.assert_awaited_once()
+
+
+def test_openai_mapper_normalize_response():
+    from app.providers.openai.mapper import OpenAIMapper
+
+    raw = SimpleNamespace(
+        id="chatcmpl_abc123",
+        model="gpt-4.1-mini",
+        created=1752600012,
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(role="assistant", content="Hello!"),
+                finish_reason="stop",
+            )
+        ],
+        usage=SimpleNamespace(
+            prompt_tokens=12,
+            completion_tokens=18,
+            total_tokens=30,
+        ),
+    )
+
+    normalized = OpenAIMapper().normalize_response(raw, latency_ms=428.5)
+
+    assert normalized.model_dump() == {
+        "id": "chatcmpl_abc123",
+        "provider": "openai",
+        "model": "gpt-4.1-mini",
+        "created": 1752600012,
+        "object": "chat.completion",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": "Hello!"},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 12,
+            "completion_tokens": 18,
+            "total_tokens": 30,
+        },
+        "latency_ms": 428.5,
+    }
