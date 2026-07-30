@@ -7,11 +7,13 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.auth.permissions import require_admin
+from app.config.store import get_config_store
+from app.exceptions.gateway import ValidationError
 from app.models.user import User
 from app.schemas.admin import (
-    AllowedModelResponse,
+    AuditLogResponse,
     BudgetDashboardResponse,
-    ProviderPermissionResponse,
+    ConfigReloadResponse,
     SetAllowedModelsRequest,
     SetProviderPermissionRequest,
     TeamBudgetResponse,
@@ -22,12 +24,33 @@ from app.schemas.admin import (
     TeamRateLimitResponse,
     TeamRateLimitUpdateRequest,
     TeamResponse,
+    UsageSummaryResponse,
 )
 from app.services.audit_service import AuditService
 from app.services.quota_admin_service import QuotaAdminService
 from app.services.team_admin_service import TeamAdminService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+@router.post("/config/reload", response_model=ConfigReloadResponse)
+def reload_gateway_config(
+    _admin: User = Depends(require_admin),
+) -> ConfigReloadResponse:
+    store = get_config_store()
+    try:
+        changed = store.reload(force=True)
+    except ValidationError as exc:
+        return ConfigReloadResponse(
+            reloaded=False,
+            path=str(store.path),
+            message=str(exc.message),
+        )
+    return ConfigReloadResponse(
+        reloaded=changed,
+        path=str(store.path),
+        message="Configuration reloaded." if changed else "Configuration unchanged.",
+    )
 
 
 @router.get("/teams", response_model=list[TeamResponse])
@@ -256,3 +279,30 @@ def team_budget_dashboard(
         monthly_warning=dashboard.monthly_warning,
         hard_enforcement=dashboard.hard_enforcement,
     )
+
+
+@router.get("/teams/{team_id}/usage", response_model=UsageSummaryResponse)
+def team_usage_summary(
+    team_id: UUID,
+    days: int = 7,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> UsageSummaryResponse:
+    summary = QuotaAdminService(db).usage_summary(team_id, days=days)
+    return UsageSummaryResponse(
+        team_id=summary.team_id,
+        period_days=summary.period_days,
+        request_count=summary.request_count,
+        total_tokens=summary.total_tokens,
+        total_cost_usd=float(summary.total_cost_usd),
+        by_model=summary.by_model,
+    )
+
+
+@router.get("/audit-logs", response_model=list[AuditLogResponse])
+def list_audit_logs(
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_admin),
+) -> list[AuditLogResponse]:
+    return QuotaAdminService(db).list_audit_logs(limit=limit)
