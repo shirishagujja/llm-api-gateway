@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.exceptions.gateway import NotFoundError
 from app.models.api_key import APIKey
@@ -123,12 +123,12 @@ class QuotaAdminService:
         return BudgetDashboardResponse(
             team_id=team.id,
             team_slug=team.slug,
-            daily_budget_usd=float(daily_limit),
-            monthly_budget_usd=float(monthly_limit),
-            daily_spent_usd=float(daily_spent),
-            monthly_spent_usd=float(monthly_spent),
-            daily_remaining_usd=float(max(Decimal("0"), daily_limit - daily_spent)),
-            monthly_remaining_usd=float(max(Decimal("0"), monthly_limit - monthly_spent)),
+            daily_budget_usd=daily_limit,
+            monthly_budget_usd=monthly_limit,
+            daily_spent_usd=daily_spent,
+            monthly_spent_usd=monthly_spent,
+            daily_remaining_usd=max(Decimal("0"), daily_limit - daily_spent),
+            monthly_remaining_usd=max(Decimal("0"), monthly_limit - monthly_spent),
             warning_threshold_pct=threshold,
             daily_warning=daily_limit > 0
             and daily_spent >= daily_limit * Decimal(threshold) / Decimal(100),
